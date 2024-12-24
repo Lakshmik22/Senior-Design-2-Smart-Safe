@@ -106,7 +106,10 @@ void checkEnteredCode() {
     delay(500);
     analogWrite(buzzerPin, LOW);
     delay(3000);
-    resetCode();
+
+    if(attempts != 3){
+      resetCode();
+    }
   }
 
   if(attempts==3){
@@ -205,6 +208,5 @@ void loop() {
     }
   }
 }
-
 
 
