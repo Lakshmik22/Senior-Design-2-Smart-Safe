@@ -37,6 +37,20 @@ int lcdColumns = 16;
 int lcdRows = 2;
 LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
 
+void displayWelcomeMessage() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Welcome to Smart");
+  lcd.setCursor(0, 1);
+  lcd.print("Safe!");
+  delay(4000);
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Enter Code or ");
+  lcd.setCursor(0, 1);
+  lcd.print("Scan finger"); 
+  }
+
 
 void resetCode() {
   for (int i = 0; i < 4; i++) {
@@ -48,6 +62,8 @@ void resetCode() {
   // Reset LEDs and display
   analogWrite(PIN_RED, 0);
   analogWrite(PIN_GREEN, 0);
+
+  displayWelcomeMessage();
 }
 
 
@@ -72,7 +88,7 @@ void checkEnteredCode() {
     lcd.print("Access Granted");
     delay(1000);
     analogWrite(buzzerPin, LOW);
-    delay(500);
+    delay(3000);
     resetCode();
   } else {
     // Code did not match - Access Denied
@@ -89,6 +105,7 @@ void checkEnteredCode() {
     analogWrite(buzzerPin, HIGH);
     delay(500);
     analogWrite(buzzerPin, LOW);
+    delay(3000);
     resetCode();
   }
 
@@ -142,16 +159,9 @@ void setup() {
   // Initialize LCD
   lcd.init();
   lcd.backlight();
-  lcd.setCursor(0, 0);
-  lcd.print("Welcome to Smart");
-  lcd.setCursor(0, 1);
-  lcd.print("Safe!");
-  delay(3000);
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Enter Code or ");
-  lcd.setCursor(0, 1);
-  lcd.print("Scan finger");
+
+  //Display Welcome Message
+  //displayWelcomeMessage();
 
   // Reset Code
   resetCode();
@@ -195,4 +205,6 @@ void loop() {
     }
   }
 }
+
+
 
