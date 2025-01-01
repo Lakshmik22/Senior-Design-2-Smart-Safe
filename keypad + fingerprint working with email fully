@@ -1,0 +1,543 @@
+//Keypad and Email
+
+#include <WiFi.h>
+#include <WebServer.h>
+#include <NetworkClient.h>
+#include <ESP_Mail_Client.h>
+
+#include "EEPROM.h"
+
+#include <Arduino.h>
+#include <Keypad.h>
+#include <LiquidCrystal_I2C.h>
+
+#include <Adafruit_Fingerprint.h>
+#include <HardwareSerial.h>
+
+// LED Pin Definitions
+#define PIN_RED    2
+#define PIN_GREEN  4
+#define PIN_BLUE   5
+
+//EEPROM Parameters
+#define EMAIL_LENGTH_BYTE 0
+#define EMAIL_START_BYTE 1
+
+// Buzzer Pin
+const int buzzerPin = 23;
+
+HardwareSerial mySerial(2);
+
+//Fingerprint
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
+
+// Keypad Definitions
+#define ROWS  4
+#define COLS  4
+ 
+const char* ssid = "everglades_Guest"; // Change as needed
+const char* password = "Dell2074"; // Change as needed
+
+#define SMTP_server "smtp.gmail.com"
+#define SMTP_Port 465
+
+#define sender_email "smartsafesd1@gmail.com"
+#define sender_password "owtibadqkzdoakpo"
+
+#define Recipient_email "sripriyapalli@gmail.com"
+#define Recipient_name "Smart Safe User"
+
+
+char keyMap[ROWS][COLS] = {
+  {'1', '2', '3', 'A'},
+  {'4', '5', '6', 'B'},
+  {'7', '8', '9', 'C'},
+  {'*', '0', '#', 'D'}
+};
+
+uint8_t rowPins[ROWS] = {33, 32, 18, 19}; // GPIO pins for keypad rows
+uint8_t colPins[COLS] = {14, 27, 26, 25}; // GPIO pins for keypad columns
+
+Keypad keypad = Keypad(makeKeymap(keyMap), rowPins, colPins, ROWS, COLS);
+
+// Code Variables
+char enteredCode[4] = {' ', ' ', ' ', ' '};
+char correctCode[4] = {'1', '2', '3', '4'};
+int numberOfCodeDigitsEntered = 0;
+int attempts = 0;
+
+// LCD Definitions
+int lcdColumns = 16;
+int lcdRows = 2;
+LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
+
+void displayWelcomeMessage() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Welcome to Smart");
+  lcd.setCursor(0, 1);
+  lcd.print("Safe!");
+  delay(4000);
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Enter Code or ");
+  lcd.setCursor(0, 1);
+  lcd.print("Scan finger"); 
+  }
+
+void resetCode() {
+  for (int i = 0; i < 4; i++) {
+    enteredCode[i] = ' ';
+    enteredCode[i] = '\0';
+  }
+  numberOfCodeDigitsEntered = 0;
+
+  // Reset LEDs and display
+  analogWrite(PIN_RED, 0);
+  analogWrite(PIN_GREEN, 0);
+
+  displayWelcomeMessage();
+}
+
+void checkEnteredCode() {
+  bool codeMatched = true;
+
+  // Loop over the correct code and check against the entered code
+  for (int i = 0; i < 4; i++) {
+    if (correctCode[i] != enteredCode[i]) {
+      codeMatched = false;
+      break;
+    }
+  }
+
+  if (codeMatched == true) {
+    // Code matched - Access Granted
+    analogWrite(PIN_GREEN, 255);
+    analogWrite(PIN_RED, 0);
+    analogWrite(buzzerPin, HIGH);
+    lcd.clear();
+    //lcd.setCursor(0, 0);
+    lcd.print("Access Granted");
+    delay(1000);
+    analogWrite(buzzerPin, LOW);
+    delay(3000);
+    resetCode();
+
+    /*
+      Send Email Notification Here
+    */
+    sendEmail(readEEPROM(), "Smart Safe Access Attempt", "We want to notify you that your safe has been accessed.");
+    Serial.println("Sending safe accessed email...");
+
+  } else {
+    // Code did not match - Access Denied
+    attempts++;
+    analogWrite(PIN_RED, 255);
+    analogWrite(PIN_GREEN, 0);
+    analogWrite(buzzerPin, HIGH);
+    lcd.clear();
+    //lcd.setCursor(0, 0);
+    lcd.print("Access Denied");
+    delay(500);
+    analogWrite(buzzerPin, LOW);
+    delay(500);
+    analogWrite(buzzerPin, HIGH);
+    delay(500);
+    analogWrite(buzzerPin, LOW);
+    delay(3000);
+    
+    if(attempts != 3){
+      resetCode();
+    }
+  }
+
+  if(attempts==3){
+        Serial.println("LOCKDOWN MODE ACTIVATED!");
+        lcd.clear();
+        lcd.print("LOCKDOWN MODE ACTIVATED!");
+        analogWrite(buzzerPin, HIGH); // Set to HIGH to make the buzzer sound
+        delay(1000); // Wait for 3 milliseconds
+
+        analogWrite(PIN_RED,   250);
+        analogWrite(PIN_GREEN, 0);
+        analogWrite(PIN_BLUE,  0);
+        delay(500); // keep the color 1 second
+        analogWrite(PIN_RED,   0);
+        analogWrite(PIN_GREEN, 0);
+        analogWrite(PIN_BLUE,  0);
+        delay(500); // keep the color 1 second
+        analogWrite(PIN_RED,   250);
+        analogWrite(PIN_GREEN, 0);
+        analogWrite(PIN_BLUE,  0);
+        delay(500); // keep the color 1 second
+        analogWrite(PIN_RED,   0);
+        analogWrite(PIN_GREEN, 0);
+        analogWrite(PIN_BLUE,  0);
+        delay(500); // keep the color 1 second
+        analogWrite(PIN_RED,   250);
+        analogWrite(PIN_GREEN, 0);
+        analogWrite(PIN_BLUE,  0);
+        delay(500); // keep the color 1 second
+        analogWrite(PIN_RED,   0);
+        analogWrite(PIN_GREEN, 0);
+        analogWrite(PIN_BLUE,  0);
+
+        analogWrite(buzzerPin, LOW); // LOW to turn off the buzzer
+
+        /*
+            Send Email Notification Here
+        */
+        sendEmail(readEEPROM(), "High Alert: Safe Lockdown Mode Activated", "Your safe has entered lockdown mode!");
+        Serial.println("Sending email about lockdown mode...");
+        
+        attempts=0;
+
+      }
+}
+
+
+
+
+// Declare the global used SMTPSession object for SMTP transport 
+SMTPSession smtp;
+
+
+WebServer server(80);
+Session_Config config;
+
+String readEEPROM() {
+  //Ready the first byte
+  int val = EEPROM.read(EMAIL_LENGTH_BYTE);
+
+  String emailAddress = "";
+
+  if (val == 0) {
+    Serial.println("No email address has been saved to EEPROM");
+  } else {
+    for (int i = 0; i < val; i++) {
+      /*
+      Serial.print(i + EMAIL_START_BYTE, HEX);
+      Serial.print(" ");
+      Serial.print(EEPROM.read(i + EMAIL_START_BYTE), DEC);
+      Serial.print(" ");
+      */
+      char temp = EEPROM.read(i + EMAIL_START_BYTE);
+      emailAddress = emailAddress + String(temp);
+      //Serial.println(temp);
+
+    }
+    
+  }
+
+  return emailAddress;
+
+}
+
+void clearEmailFromEEPROM() {
+
+}
+
+void saveEmailToEEPROM(String emailAddress) {
+
+  //Determine length of email address
+  //Save it to byte 0 in eeprom
+  int emailLength = emailAddress.length();
+  EEPROM.write(EMAIL_LENGTH_BYTE, emailLength);
+
+  for (int i = 0; i < emailLength; i++) {
+    Serial.print("Writing character: ");
+    Serial.print(emailAddress.charAt(i));
+    Serial.print(" to address: ");
+    Serial.println(i + EMAIL_START_BYTE, HEX);
+    
+    EEPROM.write(i + EMAIL_START_BYTE, emailAddress.charAt(i));
+
+  }
+
+  EEPROM.commit();
+
+  //Test by checking the saved email
+  String savedEmail = readEEPROM();
+  Serial.print("Saved Email: ");
+  Serial.println(savedEmail);
+
+}
+
+void setup() {
+
+  Serial.begin(115200);
+
+  EEPROM.begin(258);
+
+  delay(3000);
+
+  // Initialize Pins
+  pinMode(PIN_RED, OUTPUT);
+  pinMode(PIN_GREEN, OUTPUT);
+  pinMode(PIN_BLUE, OUTPUT);
+  pinMode(buzzerPin, OUTPUT);
+
+  // Initialize LCD
+  lcd.init();
+  lcd.backlight();
+
+  //Serial.begin(9600);
+  mySerial.begin(57600, SERIAL_8N1, 17, 16);
+
+  //finger.begin(57600);
+
+  if (finger.verifyPassword()) {
+    Serial.println("Fingerprint Sensor Connected");
+  } else {
+    Serial.println("Unable to find Sensor\nCheck Connections");
+  }
+
+  String savedEmail = readEEPROM();
+  Serial.print("Saved EmailL: ");
+  Serial.println(savedEmail);
+
+
+  //Setup Email client
+  MailClient.networkReconnect(true);
+
+  smtp.debug(1);
+
+  
+
+  // Connect to Wi-Fi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Connecting to WiFi...");
+  }
+  Serial.println("Connected to WiFi");
+
+  // Print the ESP32's IP address
+  Serial.print("ESP32 Web Server's IP address: ");
+  Serial.println(WiFi.localIP());
+
+  // Define a route to serve the HTML page
+  server.on("/", HTTP_GET, []() {
+    String response = "<!DOCTYPE html>"
+      "<html>"
+      "<head>"
+      "<title>Smart Safe</title>"
+      "<style>"
+      "h1 {text-align: center; margin-top: 30px;}"  
+      "h2 {position: absolute; top: 110px; right: 110px; font-size: 20px;}"
+
+      //Paragraphs
+      "p  {position: relative; left: 40px; top: 40px; font-size: 18px; color: #333;}"
+      "p1 {text-align: center; position: absolute; top: 160px; right: 60px; font-size: 18px; color: #333;}"
+      "p2 {text-align: center; position: absolute; top: 190px; right: 60px; font-size: 18px; color: #333;}"
+      "p3 {text-align: center; position: absolute; top: 230px; right: 60px; font-size: 18px; color: #333;}"
+
+      "body {"
+            "background-color: lightblue;"
+        "}"
+
+      "input[type=email] {position: relative; left: 40px; top: 45px; padding: 10px; font-size: 16px; width: 250px;}"
+      "button {"
+      "position: relative; left: 50px; top: 45px; padding: 10px 20px;"
+      "font-size: 16px; border-radius: 5px; background-color: #007BFF; color: white;"
+      "border: none; cursor: pointer;"
+      "}"
+      "button:hover {background-color: #0056b3;}"
+      "</style>"
+      "</head>"
+      "<body>"
+      "<h1>Welcome to Smart Safe</h1>"
+      "<p>Please Enter Your Email Address:</p>"
+      "<input type='email' id='email' name='user_email' placeholder='Enter your email here'>"
+      "<button onclick='displayMessage()'>Submit</button>"
+      "<p id='SubmitMessage'></p>"
+      "<script>"
+      "function displayMessage() {"
+      "  document.getElementById('SubmitMessage').innerHTML = 'Thank you, please keep an eye on emails from our safe!';"
+      "   fetch(`/sendemail?email=${document.getElementById('email').value}`, {method: 'GET'} )"
+      "   .then(res => console.log(res))"
+      "}"
+      "</script>"
+
+      "<h2>Contact Us:</h2>"
+      "<p1>Email: SmartSafeSD1@gmail.com</p1>"
+      "<p2>Phone Number: 345-456-5678</p2>"
+      "<p3>Feel free to contact us anytime with questions or for more information about your safe!</p3>"
+      "</body>"
+      "</html>";
+
+      server.send(200, "text/html", response);
+  });
+
+
+  server.on("/sendemail", HTTP_GET, []() {
+    Serial.println("SendEmail endpoint triggered");
+ 
+    String email = server.arg(0);
+
+    saveEmailToEEPROM(email);
+
+    sendEmail(readEEPROM(), "Sign up complete", "Thanks for registering");
+
+    server.send(200, "text/html", email);
+    
+      //Send the email
+    //sendEmail("", );
+      
+  });
+
+  // Start the server
+  server.begin();
+
+  // Reset Code
+  resetCode();
+
+}
+
+void loop() {
+  server.handleClient();
+  delay(2);
+
+  if (keypad.getKeys()) {
+    for (int i = 0; i < LIST_MAX; i++) {
+      if (keypad.key[i].stateChanged) { // Only find keys that have changed state
+        switch (keypad.key[i].kstate) { // Check active key state
+          case PRESSED:
+          Serial.println(keypad.key[i].kchar);
+            switch (keypad.key[i].kchar) {
+              case '*': // Reset
+                analogWrite(buzzerPin, HIGH);
+                delay(200);
+                analogWrite(buzzerPin, LOW);
+                delay(500);
+                lcd.clear();
+                lcd.setCursor(0, 0);
+                lcd.print("Reset");
+                lcd.setCursor(0, 1);
+                lcd.print("Enter Code Again");
+                delay(3000);
+                resetCode();
+                break;
+              case '#': // Check code
+                checkEnteredCode();
+                break;
+              default: // Enter digits
+                if (numberOfCodeDigitsEntered < 4) {
+                  enteredCode[numberOfCodeDigitsEntered] = keypad.key[i].kchar;
+                  numberOfCodeDigitsEntered++;
+                }
+                break;
+            }
+            break;
+        }
+
+      }
+    }
+  }
+
+  // FINGERPRINT PROCESSING
+  getFingerprintID();
+}
+
+uint8_t getFingerprintID() {
+  uint8_t p = finger.getImage();
+  if (p != FINGERPRINT_OK) return p;
+
+  p = finger.image2Tz();
+  if (p != FINGERPRINT_OK) return p;
+
+  p = finger.fingerSearch();
+  if (p == FINGERPRINT_OK) {
+     Serial.println("Access granted");
+    
+    // Code matched - Access Granted
+    analogWrite(PIN_GREEN, 255);
+    analogWrite(PIN_RED, 0);
+    analogWrite(buzzerPin, HIGH);
+  
+    lcd.clear();
+    //lcd.setCursor(0, 0);
+    lcd.print("Access Granted");
+
+    delay(1000);
+    analogWrite(buzzerPin, LOW);
+
+
+    delay(3000);
+    resetCode();
+    
+    sendEmail(readEEPROM(), "Smart Safe Access Attempt", "We want to notify you that your safe has been accessed.");
+    Serial.println("Sending safe accessed email...");
+
+    
+
+  } else if (p == FINGERPRINT_NOTFOUND) {
+    Serial.println("Not Valid Finger");
+
+    analogWrite(PIN_RED, 255);
+    analogWrite(PIN_GREEN, 0);
+
+    lcd.clear();
+    //lcd.setCursor(0, 0);
+    lcd.print("Access Denied");
+
+    analogWrite(buzzerPin, HIGH);
+    delay(500);
+    analogWrite(buzzerPin, LOW);
+    delay(500);
+    analogWrite(buzzerPin, HIGH);
+    delay(500);
+    analogWrite(buzzerPin, LOW);
+
+    delay(3000);
+
+    resetCode();
+    
+  }
+
+  return p;
+}
+
+
+void sendEmail(String emailAddress, String subject, String body) {
+
+  ESP_Mail_Session session;
+
+  session.server.host_name = SMTP_server ;
+
+  session.server.port = SMTP_Port;
+
+  session.login.email = sender_email;
+
+  session.login.password = sender_password;
+
+  session.login.user_domain = "";
+
+  /* Declare the message class */
+
+  SMTP_Message message;
+
+  message.sender.name = "Smart Safe";
+
+  message.sender.email = sender_email;
+
+  message.subject = subject;
+
+  message.addRecipient(Recipient_name, emailAddress);
+
+  String textMsg = "Thank you for registering your Email with us!";
+
+  message.text.content = body.c_str();
+
+  message.text.charSet = "us-ascii";
+
+  message.text.transfer_encoding = Content_Transfer_Encoding::enc_7bit;
+
+  if (!smtp.connect(&session))
+
+    return;
+
+  if (!MailClient.sendMail(&smtp, &message))
+
+    Serial.println("Error sending Email, " + smtp.errorReason());
+}
