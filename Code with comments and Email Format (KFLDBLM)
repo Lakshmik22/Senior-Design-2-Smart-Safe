@@ -1,4 +1,4 @@
-//Keypad + Fingerprint + Display + LED + Buzzer + Lockdown Mode
+//Keypad + Fingerprint + Display + LED + Buzzer + Lockdown Mode + Comments + Website + Email
 #include <WiFi.h>
 #include <WebServer.h>
 #include <NetworkClient.h>
@@ -130,7 +130,7 @@ void checkEnteredCode() {
     resetCode();
 
     //Send Email if Access Attempt is correct
-    sendEmail(readEEPROM(), "Smart Safe Access Attempt", "We want to notify you that your safe has been accessed.");
+    sendEmail(readEEPROM(), "Smart Safe Access Attempt", "Hello Safe User, \n\nWe wanted to notify you that your safe was accessed. Please review and confirm this activity to ensure it was authorized. You may check the timestamp on this email for the exact time of access. If this was an unauthorized attempt, we recommend securing the safe and taking extra precautions. \n\nThank you, \nSmart Safe");
     Serial.println("Sending safe accessed email...");
 
   } else {
@@ -190,7 +190,7 @@ void checkEnteredCode() {
         analogWrite(buzzerPin, LOW);
 
         //Send Email about Lockdown Mode
-        sendEmail(readEEPROM(), "High Alert: Safe Lockdown Mode Activated", "Your safe has entered lockdown mode!");
+        sendEmail(readEEPROM(), "High Alert: Safe Lockdown Mode Activated", "Hello Safe User, \n\nThis is a high-priority alert to inform you that your safe has entered Lockdown Mode. Lockdown Mode is activated after multiple failed access attempts, and no further access will be allowed until a registered user disengages it using their fingerprint. If this was an unauthorized attempt, we reccomend taking necessary precautions. \n\nThank you, \nSmart Safe");
         Serial.println("Sending email about lockdown mode...");
         
         attempts=0; //Reset Attempts
@@ -395,7 +395,7 @@ void setup() {
 
     saveEmailToEEPROM(email);
 
-    sendEmail(readEEPROM(), "Email Sign Up Complete", "Thanks for registering your email with Smart Safe! Please check your email for future notifications about your safe."); 
+    sendEmail(readEEPROM(), "Email Sign Up Complete", "Hello Safe User, \n\nThanks for registering your email with Smart Safe! Please check your email for future notifications about your safe. \n\nThank you, \nSmart Safe"); 
 
     server.send(200, "text/html", email);
       
@@ -485,8 +485,8 @@ uint8_t getFingerprintID() {
     delay(3000);
     resetCode();
     
-    //Send Email
-    sendEmail(readEEPROM(), "Smart Safe Access Attempt", "We want to notify you that your safe has been accessed.");
+    //Send Email if Access Attempt is correct
+    sendEmail(readEEPROM(), "Smart Safe Access Attempt", "Hello Safe User, \n\nWe wanted to notify you that your safe was accessed. Please review and confirm this activity to ensure it was authorized. You may check the timestamp on this email for the exact time of access. If this was an unauthorized attempt, we recommend securing the safe and taking extra precautions. \n\nThank you, \nSmart Safe");
     Serial.println("Sending safe accessed email...");
 
   } 
