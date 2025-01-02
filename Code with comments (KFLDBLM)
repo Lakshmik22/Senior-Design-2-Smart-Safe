@@ -36,9 +36,9 @@
 #define EMAIL_LENGTH_BYTE 0
 #define EMAIL_START_BYTE 1
 
-//Wifi
-const char* ssid = "everglades_Guest"; // Change as needed
-const char* password = "Dell2074"; // Change as needed
+//Wifi Credentials
+const char* ssid = "everglades_Guest"; 
+const char* password = "Dell2074";
 
 // Buzzer Pin
 const int buzzerPin = 23;
