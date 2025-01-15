@@ -9,7 +9,7 @@
 #define PIN_GREEN  4
 #define PIN_BLUE   35
 
-#define RELAY_PIN 23
+#define RELAY_PIN 15
 
 //Motion Sensor Code
 const int trigPin = 5;
@@ -87,7 +87,6 @@ void resetCode() {
   displayWelcomeMessage();
 }
 
-
 void checkEnteredCode() {
   bool codeMatched = true;
 
@@ -101,10 +100,6 @@ void checkEnteredCode() {
 
   if (codeMatched == true) {
     // Code matched - Access Granted
-    digitalWrite(RELAY_PIN, HIGH); // unlock the door
-    delay(5000);
-    digitalWrite(RELAY_PIN, LOW);  // lock the door
-    delay(5000);
 
     analogWrite(PIN_GREEN, 255);
     analogWrite(PIN_RED, 0);
@@ -114,7 +109,9 @@ void checkEnteredCode() {
     lcd.print("Access Granted");
     delay(1000);
     analogWrite(buzzerPin, 0);
-    delay(3000);
+
+    energizeLock();
+
     resetCode();
   } else {
     // Code did not match - Access Denied
@@ -216,6 +213,9 @@ void setup() {
 
 void loop() {
 
+//digitalWrite(RELAY_PIN, LOW);  // lock the door
+//delay(1000);
+
   // Clears the trigPin
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
@@ -234,7 +234,7 @@ void loop() {
   distanceInch = distanceCm * CM_TO_INCH;
   
 
-  if(distanceInch <6){
+  if(distanceInch <2){
     Serial.print("\nMotion Detected\n");
 
     analogWrite(PIN_GREEN, 250);
@@ -292,6 +292,14 @@ void loop() {
   getFingerprintID();
 }
 
+void energizeLock(){
+
+  digitalWrite(RELAY_PIN, HIGH); // unlock the door
+    delay(5000);
+    digitalWrite(RELAY_PIN, LOW);  // lock the door
+    delay(5000);
+}
+
 uint8_t getFingerprintID() {
   uint8_t p = finger.getImage();
   if (p != FINGERPRINT_OK) return p;
@@ -302,11 +310,6 @@ uint8_t getFingerprintID() {
   p = finger.fingerSearch();
   if (p == FINGERPRINT_OK) {
      Serial.println("Access granted");
-
-    digitalWrite(RELAY_PIN, HIGH); // unlock the door
-    delay(5000);
-    digitalWrite(RELAY_PIN, LOW);  // lock the door
-    delay(5000);
     
     // Code matched - Access Granted
     analogWrite(PIN_GREEN, 255);
@@ -320,8 +323,7 @@ uint8_t getFingerprintID() {
     delay(1000);
     analogWrite(buzzerPin, 0);
 
-
-    delay(4000);
+    energizeLock();
 
     resetCode();
 
@@ -351,5 +353,3 @@ uint8_t getFingerprintID() {
 
   return p;
 }
-
-
