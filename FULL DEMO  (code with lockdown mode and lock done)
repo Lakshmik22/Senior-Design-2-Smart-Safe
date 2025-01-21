@@ -145,9 +145,11 @@ void checkEnteredCode() {
 
     energizeLock();
 
+    attempts = 0;
     resetCode();
 
-    sendEmail(readEEPROM(), "Smart Safe Access Attempt", "We want to notify you that your safe has been accessed.");
+    //Send Email if Access Attempt is correct
+    sendEmail(readEEPROM(), "Smart Safe Access Attempt", "Hello Safe User, \n\nWe wanted to notify you that your safe was accessed. Please review and confirm this activity to ensure it was authorized. You may check the timestamp on this email for the exact time of access. If this was an unauthorized attempt, we recommend securing the safe and taking extra precautions. \n\nThank you, \nSmart Safe");
     Serial.println("Sending safe accessed email...");
 
   } else {
@@ -211,10 +213,8 @@ void checkEnteredCode() {
 
         analogWrite(buzzerPin, 0); // LOW to turn off the buzzer
 
-        /*
-            Send Email Notification Here
-        */
-        sendEmail(readEEPROM(), "High Alert: Safe Lockdown Mode Activated", "Your safe has entered lockdown mode!");
+        //Send Email about Lockdown Mode
+        sendEmail(readEEPROM(), "High Alert: Safe Lockdown Mode Activated", "Hello Safe User, \n\nThis is a high-priority alert to inform you that your safe has entered Lockdown Mode. Lockdown Mode is activated after multiple failed access attempts, and no further access will be allowed until a registered user disengages it using their fingerprint. If this was an unauthorized attempt, we reccomend taking necessary precautions. \n\nThank you, \nSmart Safe");
         Serial.println("Sending email about lockdown mode...");
         
         attempts=0;
@@ -434,7 +434,7 @@ void setup() {
 
     saveEmailToEEPROM(email);
 
-    sendEmail(readEEPROM(), "Sign up complete", "Thanks for registering");
+    sendEmail(readEEPROM(), "Email Sign Up Complete", "Hello Safe User, \n\nThanks for registering your email with Smart Safe! Please check your email for future notifications about your safe. \n\nThank you, \nSmart Safe"); 
 
     server.send(200, "text/html", email);
     
@@ -495,8 +495,8 @@ void loop() {
 
       resetCode();
 
-      sendEmail(readEEPROM(), "Motion Detected Near Safe", "We want to notify you that your motion has been detected enar your safe.");
-      //Serial.println("Sending Motion Detected Email...");
+      sendEmail(readEEPROM(), "Alert: Motion Detected Near Your Safe", "Hello Safe User, \n\nWe wanted to alert you that movement was detected near your safe. This may indicate an attempt to access or tamper with the safe. Please verify that this activity is authorized. If you suspect unauthorized access, consider checking the area and taking necessary precautions.  \n\nThank you, \nSmart Safe");
+      Serial.println("Sending Motion Detected Email...");
 
       timeOfNextMotionTrigger = millis() + MOTION_REPORT_DELAY;
     }
@@ -603,10 +603,10 @@ uint8_t getFingerprintID() {
 
     resetCode();
     
-    sendEmail(readEEPROM(), "Smart Safe Access Attempt", "We want to notify you that your safe has been accessed.");
+    //Send Email if Access Attempt is correct
+    sendEmail(readEEPROM(), "Smart Safe Access Attempt", "Hello Safe User, \n\nWe wanted to notify you that your safe was accessed. Please review and confirm this activity to ensure it was authorized. You may check the timestamp on this email for the exact time of access. If this was an unauthorized attempt, we recommend securing the safe and taking extra precautions. \n\nThank you, \nSmart Safe");
     Serial.println("Sending safe accessed email...");
 
-    
 
   } else if (p == FINGERPRINT_NOTFOUND) {
     Serial.println("Not Valid Finger");
