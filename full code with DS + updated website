@@ -193,8 +193,16 @@ void checkEnteredCode() {
         lcd.print("ACTIVATED!");
 
         analogWrite(buzzerPin, 250); // Set to HIGH to make the buzzer sound
-        delay(1000); // Wait for 3 milliseconds
+        delay(2000); // Wait for 3 milliseconds
 
+        analogWrite(PIN_RED,   250);
+        analogWrite(PIN_GREEN, 0);
+        analogWrite(PIN_BLUE,  0);
+        delay(500); // keep the color 1 second
+        analogWrite(PIN_RED,   0);
+        analogWrite(PIN_GREEN, 0);
+        analogWrite(PIN_BLUE,  0);
+        delay(500); // keep the color 1 second
         analogWrite(PIN_RED,   250);
         analogWrite(PIN_GREEN, 0);
         analogWrite(PIN_BLUE,  0);
@@ -503,7 +511,7 @@ duration1 = pulseIn(echoPin1, HIGH);
   }
 
   
-if (keypad.getKeys()) {
+if (inLockdownMode == false && keypad.getKeys()) {
     for (int i = 0; i < LIST_MAX; i++) {
       if (keypad.key[i].stateChanged) { // Only find keys that have changed state
         switch (keypad.key[i].kstate) { // Check active key state
@@ -578,6 +586,8 @@ void checkDoor() {
         Serial.println("Sending door open alarm email");
         sendEmail(readEEPROM(), "Safe Door Left Open", "Hello Safe User, \n\nWe wanted to alert you that your safe door has been left open. Please close the door of your safe as soon as possible.  \n\nThank you, \nSmart Safe");
         shouldSendEmail = false;
+
+        resetCode();
       }
     } else {
       //Door is now closed
@@ -591,10 +601,13 @@ void checkDoor() {
 
     //Turn off the blue LED
     digitalWrite(PIN_BLUE, 0);
-
-    //Door us currently closed
+    //Door is currently closed
     if (digitalRead(DOOR_SENSOR_PIN) == HIGH) {
       Serial.println("Door is now opened");
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Door is Open");
+
       delay(50);
       isDoorOpen = true;
       doorOpenTime = millis();
