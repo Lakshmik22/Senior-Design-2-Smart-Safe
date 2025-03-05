@@ -1,4 +1,4 @@
-//OLED Display with LED, Buzzer, and Keypad
+//Lock with fingerprint,OLED Display,LED, Buzzer, and Keypad
 #include <Arduino.h>
 #include <Keypad.h>
 #include <Wire.h>
@@ -15,6 +15,7 @@
 #define ROWS 4
 #define COLS 4
 
+//LED Definititions
 #define PIN_RED 2
 #define PIN_GREEN 4
 
@@ -41,11 +42,11 @@ char keyMap[ROWS][COLS] = {
   {'*', '0', '#', 'D'}
 };
 
-//pcb
+//pcb keypad pins
 uint8_t colPins[COLS] = {13, 12, 14, 27}; // row pins
 uint8_t rowPins[ROWS] = {26, 25, 33, 32}; // column pins 
 
-//nick
+//nick & lakshmi pins 
 //uint8_t rowPins[ROWS] = {33, 32, 18, 19}; // GPIO pins for keypad rows
 //uint8_t colPins[COLS] = {14, 27, 26, 25}; // GPIO pins for keypad columns
 
@@ -69,6 +70,7 @@ void resetCode() {
   analogWrite(PIN_GREEN, 0);
 }
 
+//Verify keypad code
 void checkEnteredCode() {
   bool codeMatched = true;
 
@@ -241,6 +243,91 @@ void checkEnteredCode() {
       }
 }
 
+// Verify entered fingerprint
+uint8_t getFingerprintID() {
+  uint8_t p = finger.getImage();
+  if (p != FINGERPRINT_OK) return p;
+
+  p = finger.image2Tz();
+  if (p != FINGERPRINT_OK) return p;
+
+  p = finger.fingerSearch();
+  if (p == FINGERPRINT_OK) {
+     Serial.println("Access granted");
+    
+    // Code matched - Access Granted
+    Serial.println("Access granted");
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    displayCenteredText("SmartSafe", 5);
+    display.setTextSize(1);
+    displayCenteredText("ACCESS", 20);
+    displayCenteredText("GRANTED" ,35);
+    display.display();
+
+    analogWrite(PIN_GREEN, 250);
+    analogWrite(buzzerPin, 250);
+    delay(1000);
+    analogWrite(PIN_GREEN, 0);
+    analogWrite(buzzerPin, 0);
+
+    energizeLock();
+    delay(10000);
+    deenergizeLock();
+
+    attempts = 0;
+
+    resetCode();
+
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    displayCenteredText("SmartSafe", 5);
+    displayCenteredText("Enter code", 20);
+    displayCenteredText("or", 35);
+    displayCenteredText("use fingerprint", 50);
+    display.display();
+
+  } else if (p == FINGERPRINT_NOTFOUND) {
+
+        Serial.println("Access denied");
+    attempts++;
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    displayCenteredText("SmartSafe", 5);
+    display.setTextSize(1);
+    displayCenteredText("ACCESS", 20);
+    displayCenteredText("DENIED,Not Valid Finger" ,35);
+
+    // Display "X" symbols horizontally for each failed attempt
+    display.setTextSize(1);
+    int startX = 40; // Start position for the first "X"
+    int yPosition = 50; // Fixed y position for all "X"s
+
+    for (int i = 0; i < attempts; i++) {
+      display.setCursor(startX + (i * 20), yPosition); // Move right for each "X"
+      display.print("X");
+    }
+
+    display.display();
+
+    analogWrite(PIN_RED, 250);
+    analogWrite(buzzerPin, 250);
+    delay(1000);
+    analogWrite(buzzerPin, 0);
+    analogWrite(PIN_RED, 0);
+    
+    if(attempts != 3){
+      resetCode();
+      updateOLEDDisplay();
+    }
+  }
+
+  return p;
+}
+
 //Unlocks door
 void energizeLock(){ //unlock door
   digitalWrite(RELAY_PIN, LOW);
@@ -387,55 +474,3 @@ void loop() {
   // FINGERPRINT PROCESSING
   getFingerprintID();
 } 
-
-uint8_t getFingerprintID() {
-  uint8_t p = finger.getImage();
-  if (p != FINGERPRINT_OK) return p;
-
-  p = finger.image2Tz();
-  if (p != FINGERPRINT_OK) return p;
-
-  p = finger.fingerSearch();
-  if (p == FINGERPRINT_OK) {
-     Serial.println("Access granted");
-    
-    // Code matched - Access Granted
-    analogWrite(PIN_GREEN, 255);
-    analogWrite(PIN_RED, 0);
-    analogWrite(buzzerPin, 250);
-
-    energizeLock();
-    delay(10000);
-    deenergizeLock();
-
-    attempts = 0;
-  
-
-    delay(1000);
-    analogWrite(buzzerPin, 0);
-
-    delay(4000);
-
-    resetCode();
-
-  } else if (p == FINGERPRINT_NOTFOUND) {
-    Serial.println("Not Valid Finger");
-
-    analogWrite(PIN_RED, 255);
-    analogWrite(PIN_GREEN, 0);
-
-    analogWrite(buzzerPin, 250);
-    delay(500);
-    analogWrite(buzzerPin, 0);
-    delay(500);
-    analogWrite(buzzerPin, 250);
-    delay(500);
-    analogWrite(buzzerPin, 0);
-
-    delay(4000);
-
-    resetCode();
-  }
-
-  return p;
-}
