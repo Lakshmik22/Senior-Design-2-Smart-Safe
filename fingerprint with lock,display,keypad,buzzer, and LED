@@ -307,7 +307,6 @@ uint8_t getFingerprintID() {
     analogWrite(buzzerPin, 0);
     analogWrite(PIN_RED, 0);
     }
-  }
 
   return p;
 }
