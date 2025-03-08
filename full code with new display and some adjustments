@@ -29,7 +29,7 @@ const int echoPin1 = 35;
 
 bool shouldReportDistance = true;
 long timeOfNextMotionTrigger = 0;
-#define MOTION_REPORT_DELAY 1000 * 30
+#define MOTION_REPORT_DELAY 1000 * 60 * 5
 
 //define sound speed in cm/uS
 #define SOUND_SPEED 0.034
@@ -87,7 +87,7 @@ Keypad keypad = Keypad(makeKeymap(keyMap), rowPins, colPins, ROWS, COLS);
 
 // Code Variables
 char enteredCode[4] = {' ', ' ', ' ', ' '};
-char correctCode[4] = {'1', '2', '3', '7'};
+char correctCode[4] = {'1', '2', '3', '4'};
 
 int numberOfCodeDigitsEntered = 0;
 int attempts = 0;
@@ -306,7 +306,7 @@ void checkEnteredCode() {
         delay(1000);
 
         //Send Email about Lockdown Mode
-        sendEmail(readEEPROM(), "High Alert: Safe Lockdown Mode Activated", "Hello Safe User, \n\nThis is a high-priority alert to inform you that your safe has entered Lockdown Mode. Lockdown Mode is activated after multiple failed access attempts, and no further access will be allowed until a registered user disengages it using their fingerprint. If this was an unauthorized attempt, we recommend taking necessary precautions. \n\nThank you, \nSmart Safe");
+        sendEmail(readEEPROM(), "High Alert: Safe Lockdown Mode Activated", "Hello Safe User, \n\nThis is a high-priority alert to inform you that your safe has entered Lockdown Mode. Lockdown Mode is activated after multiple failed access attempts, and no further access will be allowed until a registered user disengages it using their fingerprint. \n\nThank you, \nSmart Safe");
         Serial.println("Sending email about lockdown mode...");
         
         attempts=0;
