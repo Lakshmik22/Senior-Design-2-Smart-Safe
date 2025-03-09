@@ -43,12 +43,12 @@ char keyMap[ROWS][COLS] = {
 };
 
 //pcb keypad pins
-uint8_t colPins[COLS] = {13, 12, 14, 27}; // row pins
-uint8_t rowPins[ROWS] = {26, 25, 33, 32}; // column pins 
+//uint8_t colPins[COLS] = {13, 12, 14, 27}; // row pins
+//uint8_t rowPins[ROWS] = {26, 25, 33, 32}; // column pins 
 
 //nick & lakshmi pins 
-//uint8_t rowPins[ROWS] = {33, 32, 18, 19}; // GPIO pins for keypad rows
-//uint8_t colPins[COLS] = {14, 27, 26, 25}; // GPIO pins for keypad columns
+uint8_t rowPins[ROWS] = {33, 32, 18, 19}; // GPIO pins for keypad rows
+uint8_t colPins[COLS] = {14, 27, 26, 25}; // GPIO pins for keypad columns
 
 Keypad keypad = Keypad(makeKeymap(keyMap), rowPins, colPins, ROWS, COLS);
 
@@ -313,12 +313,12 @@ uint8_t getFingerprintID() {
 
 //Unlocks door
 void energizeLock(){ //unlock door
-  digitalWrite(RELAY_PIN, HIGH);
+  digitalWrite(RELAY_PIN, LOW);
 }
 
 //Locks door
 void deenergizeLock(){ //lock door
-  digitalWrite(RELAY_PIN, LOW);
+  digitalWrite(RELAY_PIN, HIGH);
 }
 
 // Function that displasy centered text
