@@ -33,7 +33,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 bool inLockdownMode = false;
 unsigned long int disableUntil = 0;
-const unsigned long disableDuration = 10000;
+const unsigned long disableDuration = 5000;
 
 char keyMap[ROWS][COLS] = {
   {'1', '2', '3', 'A'},
@@ -146,13 +146,13 @@ void checkEnteredCode() {
     analogWrite(buzzerPin, 0);
     analogWrite(PIN_RED, 0);
     
-    if(attempts != 3){
+    if(attempts != 4){
       resetCode();
       updateOLEDDisplay();
     }
   }
 
-  if(attempts==3){
+  if(attempts==4){
         Serial.println("LOCKDOWN MODE ACTIVATED!");
         resetCode();
         inLockdownMode = true;
@@ -426,7 +426,7 @@ void loop() {
           switch (keypad.key[i].kstate) { // Check active key state
             case PRESSED:
             Serial.println(keypad.key[i].kchar);
-            analogWrite(buzzerPin, 250);
+            analogWrite(buzzerPin, 100);
             delay(200);
             analogWrite(buzzerPin, 0);
               switch (keypad.key[i].kchar) {
