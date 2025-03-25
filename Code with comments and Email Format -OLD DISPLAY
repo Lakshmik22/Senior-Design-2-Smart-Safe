@@ -1,3 +1,4 @@
+//OLD DISPLAY
 //Keypad + Fingerprint + Display + LED + Buzzer + Lockdown Mode + Comments + Website + Email
 #include <WiFi.h>
 #include <WebServer.h>
