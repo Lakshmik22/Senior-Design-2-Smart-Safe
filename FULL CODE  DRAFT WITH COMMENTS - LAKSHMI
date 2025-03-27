@@ -854,7 +854,6 @@ uint8_t getFingerprintID() {
 /////////////////////////////// SEND EMAIL/EMAIL SETUP ////////////////////////////////////////////
 void sendEmail(String emailAddress, String subject, String body) {
 
-
   //Set display screen to sending email message
   if(attempts != 4){
        display.clearDisplay();
@@ -867,43 +866,26 @@ void sendEmail(String emailAddress, String subject, String body) {
   }
 
   ESP_Mail_Session session;
-
   session.server.host_name = SMTP_server ;
-
   session.server.port = SMTP_Port;
-
   session.login.email = sender_email;
-
   session.login.password = sender_password;
-
   session.login.user_domain = "";
 
   /* Declare the message class */
-
   SMTP_Message message;
-
   message.sender.name = "Smart Safe";
-
   message.sender.email = sender_email;
-
   message.subject = subject;
-
   message.addRecipient(Recipient_name, emailAddress);
-
   String textMsg = "Thank you for registering your Email with us!";
-
   message.text.content = body.c_str();
-
   message.text.charSet = "us-ascii";
-
   message.text.transfer_encoding = Content_Transfer_Encoding::enc_7bit;
 
   if (!smtp.connect(&session))
-
     return;
-
   if (!MailClient.sendMail(&smtp, &message))
-
     Serial.println("Error sending Email, " + smtp.errorReason());
 
 }
