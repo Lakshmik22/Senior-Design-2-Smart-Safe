@@ -694,13 +694,19 @@ void checkDoor() {
 
   if (isDoorOpen == true) {
     //Door is currently open  
+    display.clearDisplay();
+      display.setTextSize(1);
+      display.setTextColor(WHITE);
+      display.setTextSize(1);
+      displayCenteredText("SmartSafe", 5);      
+      displayCenteredText("Door Open", 20);
+      display.display();
+      digitalWrite(PIN_BLUE, 255);
 
     if (digitalRead(DOOR_SENSOR_PIN) == HIGH) {
       //Door is still open
       //Check the time to see if it's time to send the email
       if (millis() >= doorOpenTime + DOOR_OPEN_ALARM_TIMEOUT && shouldSendEmail == true) {
-
-        digitalWrite(PIN_BLUE, 255);
 
         //Send the email
         Serial.println("Sending door open alarm email");
