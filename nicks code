@@ -1,0 +1,496 @@
+//change lockdown mode disable to 30 minutes
+
+#define EEPROM_SIZE 10  // EEPROM size for storing passcode
+#define PASSCODE_LENGTH 6
+
+bool resetPasscode = false;
+bool mastercodeEntry = false;
+
+int inputIndex = 0;
+
+
+// Code Variables
+char masterCode[6] = {'1', '0', '1', '0', '1', '0'};
+char enteredCode[6] = {' ', ' ', ' ', ' ', ' ', ' '};
+char correctCode[6] = {'1', '2', '3', '4', '5', '6'};
+int attempts = 0;
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// SETUP
+void setup() {
+
+  EEPROM.begin(EEPROM_SIZE);
+  loadPasscode();
+
+  // Reset Code
+  resetCode();
+
+
+  //clear display and setup display settings
+  homeScreenDisplay();
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+void loop() {
+
+      if (keypad.getKeys()) {
+        for (int i = 0; i < LIST_MAX; i++) {
+          if (keypad.key[i].stateChanged) { // Only find keys that have changed state
+            switch (keypad.key[i].kstate) { // Check active key state
+              case PRESSED:
+              analogWrite(buzzerPin, 100);
+              delay(200);
+              analogWrite(buzzerPin, 0);
+                switch (keypad.key[i].kchar) {
+                  case '*': // Reset
+                    resetCode();
+                    updateOLEDDisplay();
+                    break;
+
+                  case '#': // Check code
+                    checkEnteredCode();
+                    break;
+
+                  case 'A': //Enroll fingerprint
+                  //input fingerprint code
+                    break;
+
+                  case 'B': //Reset passcode
+                  mastercodeEntry = true;
+                  resetCode();
+                  display.clearDisplay();
+                  display.setTextSize(1);
+                  display.setTextColor(WHITE);
+                  displayCenteredText("SmartSafe Mastermode", 5);
+                  displayCenteredText("Enter Master Code", 20);
+                  displayCenteredText("To Reset Passcode", 35);
+                  display.display();
+                  while(mastercodeEntry == true){
+                    handleMasterPasscodeEntry();
+                  }
+                    break;
+
+                  default: // Enter digits
+                    if (inputIndex < PASSCODE_LENGTH) {
+                      enteredCode[inputIndex] = keypad.key[i].kchar;
+                      inputIndex++;
+                      updateOLEDDisplay();
+                    } else {
+                      resetCode();
+                      display.clearDisplay();
+                      display.setTextSize(1);
+                      display.setTextColor(WHITE);
+                      displayCenteredText("SmartSafe", 5);
+                      displayCenteredText("Too Many Digits", 20);
+                      displayCenteredText("Entered", 35);
+                      display.display();
+                      delay(1000);
+                      homeScreenDisplay();
+                    break;
+                }
+                break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void handleMasterPasscodeEntry() { 
+    if (keypad.getKeys()) {
+        for (int i = 0; i < LIST_MAX; i++) {
+            if (keypad.key[i].stateChanged && keypad.key[i].kstate == PRESSED) {  
+                char key = keypad.key[i].kchar;
+
+                // Sound buzzer once per key press
+                analogWrite(buzzerPin, 100);
+                delay(200);
+                analogWrite(buzzerPin, 0);
+
+                // Reset Code
+                if (key == '*') {
+                    resetCode();
+                    updateOLEDDisplay();
+                } 
+                // Check Master Code
+                else if (key == '#') {
+                    if (compareCodes(enteredCode, masterCode)) {
+                        display.clearDisplay();
+                        display.setTextSize(1);
+                        display.setTextColor(WHITE);
+                        displayCenteredText("SmartSafe Mastercode", 5);
+                        displayCenteredText("Master Code", 20);
+                        displayCenteredText("Approved", 35);
+                        display.display();
+
+                        analogWrite(PIN_GREEN, 250);
+                        analogWrite(buzzerPin, 100);
+                        delay(1000);
+                        analogWrite(PIN_GREEN, 0);
+                        analogWrite(buzzerPin, 0);
+
+                        resetCode();
+                        
+                        resetPasscode = true;
+                        display.clearDisplay();
+                        display.setTextSize(1);
+                        display.setTextColor(WHITE);
+                        displayCenteredText("SmartSafe Resetmode", 5);
+                        displayCenteredText("Enter New", 20);
+                        displayCenteredText("Passcode", 35);
+                        display.display();
+                        while (resetPasscode == true){
+                          setNewPasscode();
+                        }
+                    } else {
+                        display.clearDisplay();
+                        display.setTextSize(1);
+                        display.setTextColor(WHITE);
+                        displayCenteredText("SmartSafe Mastermode", 5);
+                        displayCenteredText("Incorrect", 20);
+                        displayCenteredText("Master Code", 35);
+                        display.display();
+
+                        analogWrite(PIN_RED, 250);
+                        analogWrite(buzzerPin, 100);
+                        delay(1000);
+                        analogWrite(PIN_RED, 0);
+                        analogWrite(buzzerPin, 0);
+
+                        resetCode(); 
+                        homeScreenDisplay();
+                        mastercodeEntry = false;
+                    }
+                } 
+                // Enter Digits for Master Code
+                else {
+                    if (inputIndex < PASSCODE_LENGTH) {
+                        enteredCode[inputIndex] = key;
+                        inputIndex++;
+                        updateMasterDisplay();
+                    } else {
+                        display.clearDisplay();
+                        display.setTextSize(1);
+                        display.setTextColor(WHITE);
+                        displayCenteredText("SmartSafe Mastermode", 5);
+                        displayCenteredText("Too Many Digits", 20);
+                        displayCenteredText("Entered", 35);
+                        display.display();
+                        resetCode();
+                        delay(1000);
+
+                        display.clearDisplay();
+                        display.setTextSize(1);
+                        display.setTextColor(WHITE);
+                        displayCenteredText("SmartSafe Mastermode", 5);
+                        displayCenteredText("Enter Master Code", 20);
+                        displayCenteredText("To Reset Passcode", 35);
+                        display.display();
+                    }
+                }
+            }
+        }
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void setNewPasscode() {
+    if (keypad.getKeys()) {
+        for (int i = 0; i < LIST_MAX; i++) {
+            if (keypad.key[i].stateChanged && keypad.key[i].kstate == PRESSED) {  
+                char key = keypad.key[i].kchar;
+
+                // Sound buzzer once per key press
+                analogWrite(buzzerPin, 100);
+                delay(200);
+                analogWrite(buzzerPin, 0);
+
+                // Reset Code
+                if (key == '*') {
+                    resetCode();
+                    updateResetDisplay();
+                } 
+                // Submit Passcode
+                else if (key == '#') {
+                    if (inputIndex == PASSCODE_LENGTH) {
+                        display.clearDisplay();
+                        display.setTextSize(1);
+                        display.setTextColor(WHITE);
+                        displayCenteredText("SmartSafe Resetmode", 5);
+                        displayCenteredText("Password", 20);
+                        displayCenteredText("Reset", 35);
+                        display.display();
+                        
+                        analogWrite(PIN_GREEN, 250);
+                        analogWrite(buzzerPin, 100);
+                        delay(1000);
+                        analogWrite(PIN_GREEN, 0);
+                        analogWrite(buzzerPin, 0);
+
+                        savePasscode(enteredCode);
+
+                        delay(500);
+
+                        display.clearDisplay();
+                        display.setTextSize(1);
+                        display.setTextColor(WHITE);
+                        displayCenteredText("SmartSafe Resetmode", 5);
+                        displayCenteredText("Password", 20);
+                        displayCenteredText("Saved", 35);
+                        display.display();
+
+                        analogWrite(PIN_GREEN, 250);
+                        analogWrite(buzzerPin, 100);
+                        delay(1000);
+                        analogWrite(PIN_GREEN, 0);
+                        analogWrite(buzzerPin, 0);
+                        resetCode();
+                        resetPasscode = false;
+                        mastercodeEntry = false;
+                        homeScreenDisplay();
+                    } else {
+                        display.clearDisplay();
+                        display.setTextSize(1);
+                        display.setTextColor(WHITE);
+                        displayCenteredText("SmartSafe Resetmode", 5);
+                        displayCenteredText("Not Enough Digits", 20);
+                        displayCenteredText("Try Again", 35);
+                        display.display();
+
+                        analogWrite(PIN_RED, 250);
+                        analogWrite(buzzerPin, 100);
+                        delay(1000);
+                        analogWrite(PIN_RED, 0);
+                        analogWrite(buzzerPin, 0);
+
+                        resetCode();
+                        updateResetDisplay();
+                    }
+                } 
+                // Enter Digits for Passcode
+                else {
+                    if (inputIndex < PASSCODE_LENGTH) {
+                        enteredCode[inputIndex] = key;
+                        inputIndex++;
+                        updateResetDisplay();
+                    } else {
+                        display.clearDisplay();
+                        display.setTextSize(1);
+                        display.setTextColor(WHITE);
+                        displayCenteredText("SmartSafe Resetmode", 5);
+                        displayCenteredText("Too Many Digits", 20);
+                        displayCenteredText("Entered", 35);
+                        display.display();
+                        resetCode();
+                        delay(1000);
+
+                        display.clearDisplay();
+                        display.setTextSize(1);
+                        display.setTextColor(WHITE);
+                        displayCenteredText("SmartSafe Resetmode", 5);
+                        displayCenteredText("Enter New", 20);
+                        displayCenteredText("Passcode", 35);
+                        display.display();
+                    }
+                }
+                break; // Stop checking once a valid key is handled
+            }
+        }
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void savePasscode(char newPasscode[]) {
+    for (int i = 0; i < PASSCODE_LENGTH; i++) {
+        EEPROM.write(i, newPasscode[i]);
+        correctCode[i] = newPasscode[i];  
+    }
+    EEPROM.commit();
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void loadPasscode() {
+    for (int i = 0; i < PASSCODE_LENGTH; i++) {
+        correctCode[i] = EEPROM.read(i);
+    }
+
+    if (correctCode[0] == 0xFF) {
+        char defaultPass[6] = {'1', '2', '3', '4', '5', '6'};
+        savePasscode(defaultPass);
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void resetCode() {
+  for (int i = 0; i < PASSCODE_LENGTH; i++) {
+    enteredCode[i] = ' ';
+    enteredCode[i] = '\0';
+  }
+  inputIndex = 0;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+bool compareCodes(char entered[], char stored[]) {
+    for (int i = 0; i < PASSCODE_LENGTH; i++) {
+        if (entered[i] != stored[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void checkEnteredCode() {
+  if (compareCodes(enteredCode, correctCode)) {
+    // Code matched - Access Granted
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    displayCenteredText("SmartSafe", 5);
+    display.setTextSize(1);
+    displayCenteredText("ACCESS", 20);
+    displayCenteredText("GRANTED" ,35);
+    display.display();
+
+    analogWrite(PIN_GREEN, 250);
+    analogWrite(buzzerPin, 100);
+    delay(1000);
+    analogWrite(PIN_GREEN, 0);
+    analogWrite(buzzerPin, 0);
+
+    energizeLock();
+    delay(5000);
+    deenergizeLock();
+
+    attempts = 0;
+    resetCode();
+
+    homeScreenDisplay();
+
+  } else {
+    // Code did not match - Access Denied
+    attempts++;
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    displayCenteredText("SmartSafe", 5);
+    display.setTextSize(1);
+    displayCenteredText("ACCESS", 20);
+    displayCenteredText("DENIED" ,35);
+
+    // Display "X" symbols horizontally for each failed attempt
+    display.setTextSize(1);
+    int startX = 40; // Start position for the first "X"
+    int yPosition = 50; // Fixed y position for all "X"s
+
+    for (int i = 0; i < attempts; i++) {
+      display.setCursor(startX + (i * 10), yPosition); // Move right for each "X"
+      display.print("X");
+    }
+
+    display.display();
+
+    analogWrite(PIN_RED, 250);
+    analogWrite(buzzerPin, 100);
+    delay(1000);
+    analogWrite(buzzerPin, 0);
+    analogWrite(PIN_RED, 0);
+    
+    if(attempts != 4){
+      resetCode();
+      updateOLEDDisplay();
+    }
+  }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+// Function that displays centered text
+void displayCenteredText(const char* text, int y) {
+  int16_t x1, y1;
+  uint16_t w, h;
+  
+  display.getTextBounds(text, 0, y, &x1, &y1, &w, &h); // Get text dimensions
+  
+  int x = (SCREEN_WIDTH - w) / 2; // Center text horizontally
+
+  display.setCursor(x, y);
+  display.print(text);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Update OLED Display based on code
+void updateOLEDDisplay() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  displayCenteredText("SmartSafe", 5);
+  display.setCursor(25, 25);
+  
+  // Show "*" for each entered digit
+  for (int i = 0; i < inputIndex; i++) {
+    display.print("* ");
+  }
+  display.display();
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Update OLED Display based on code
+void updateMasterDisplay() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  displayCenteredText("SmartSafe Mastermode", 5);
+  display.setCursor(25, 25);
+  
+  // Show "*" for each entered digit
+  for (int i = 0; i < inputIndex; i++) {
+    display.print("* ");
+  }
+  display.display();
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Update OLED Display based on code
+void updateResetDisplay() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  displayCenteredText("SmartSafe Resetmode", 5);
+  display.setCursor(25, 25);
+  
+  // Show "*" for each entered digit
+  for (int i = 0; i < inputIndex; i++) {
+    display.print("* ");
+  }
+  display.display();
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//Home screen
+void homeScreenDisplay() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  displayCenteredText("SmartSafe", 5);
+  displayCenteredText("Enter Passcode", 20);
+  displayCenteredText("or", 35);
+  displayCenteredText("Use Fingerprint", 50);
+  display.display();
+}
+
+/////////////////////////////////////////////////////////////
