@@ -62,6 +62,8 @@ const char* ssid = "everglades_Guest"; // Change as needed
 const char* password = "Dell2074"; // Change as needed
 
 bool inLockdownMode = false;
+unsigned long int disableUntil = 0;
+const unsigned long disableDuration = 1800000; //30 minutes
 
 #define SMTP_server "smtp.gmail.com"
 #define SMTP_Port 465
@@ -85,8 +87,8 @@ uint8_t colPins[COLS] = {14, 27, 26, 25}; // GPIO pins for keypad columns
 Keypad keypad = Keypad(makeKeymap(keyMap), rowPins, colPins, ROWS, COLS);
 
 // Code Variables
-char enteredCode[4] = {' ', ' ', ' ', ' '};
-char correctCode[4] = {'1', '2', '3', '4'};
+char enteredCode[6] = {' ', ' ', ' ', ' ', ' ', ' '};
+char correctCode[6] = {'1', '2', '3', '4', '5', '6'};
 
 int numberOfCodeDigitsEntered = 0;
 int attempts = 0;
@@ -127,7 +129,7 @@ void displayWelcomeMessage() {
   }
 
 void resetCode() {
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 6; i++) {
     enteredCode[i] = ' ';
     enteredCode[i] = '\0';
   }
@@ -144,7 +146,7 @@ void checkEnteredCode() {
   bool codeMatched = true;
 
   // Loop over the correct code and check against the entered code
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 6; i++) {
     if (correctCode[i] != enteredCode[i]) {
       codeMatched = false;
       break;
@@ -225,7 +227,8 @@ void checkEnteredCode() {
   if(attempts==4){
         Serial.println("LOCKDOWN MODE ACTIVATED!");
          inLockdownMode = true;
-
+        
+        disableUntil = millis() + disableDuration;
                 
         analogWrite(buzzerPin, 250); // Set to HIGH to make the buzzer sound
         analogWrite(PIN_RED, 250); //red on
@@ -454,76 +457,109 @@ void setup() {
   // Define a route to serve the HTML page
   server.on("/", HTTP_GET, []() {
     String response = "<!DOCTYPE html>"
-    "<html>"
-    "<head>"
-        "<title>Smart Safe</title>"
-        "<style>"
-            "h1 {text-align: center;}"
-            ".info  {font-size: 18px; color: #333;}"
-            "body {"
-                "background-color: lightblue;"
-           " }"
-            "input {padding: 10px; font-size: 16px; width: 250px;}"
-           " button {"
-                "padding: 10px 15px;"
-                "font-size: 16px; border-radius: 5px; background-color: #007BFF; color: white;"
-                "border: none; cursor: pointer;"
-                "margin-left: 10px;"
-           " }"
-            "button:hover {background-color: #0056b3;}"
-            "#main {"
-                "flex-direction: column;"
-            "}"
-            ".f50 {"
-               " flex: 0 0 50%;"
-           " }"
-            ".df {"
-                "display: flex;"
-           " }"
-            ".row {"
-                "padding: 10px;"
-                "justify-content: center;"
-           " }"
-            "#contact {"
-                "flex-direction: column;"
-                "align-items: flex-start;"
-            "}"
-            "#formContainer {"
-                "flex-direction: column;"
-            "}"
-        "</style>"
-    "</head>"
-    "<body>"
-        "<div id=\"main\" class=\"df\">"
-          "<div id=\"row1\" class=\"row df\">"
-                "<h1>Welcome to Smart Safe</h1>"
-           " </div>"
-            "<div id=\"row2\" class=\"row f50 df\">"
-                "<div id=\"formContainer\" class=\"f50\">"
-                   " <h2>Please Enter Your Email Address:</h2>"
-                   " <div id=\"inputWrapper\" class=\"df\" style='margin-bottom:20px'>"
-                        "<input type='email' id='email' name='user_email' placeholder='Enter your email here' />"
-                        "<button onclick='displayMessage()'>Submit</button>"
-                    "</div>"
-                    "<span id='SubmitMessage'></span>"
-                "</div>"
-                "<div id=\"contact\" class=\"f50 df\">"
-                    "<h2>Contact Us:</h2>"
-                    "<span class=\"info\">Email: SmartSafeSD1@gmail.com</span>"
-                    "<span class=\"info\">Phone Number: 345-456-5678</span>"
-                    "<span class=\"info\">"
-                        "Feel free to contact us anytime with questions or for more information about your safe!</span>"
-               " </div>"
-           " </div>"
-        "</div>"
-        "<script>"
-           " function displayMessage() {"
-            "document.getElementById('SubmitMessage').innerHTML = 'Thank you, please keep an eye on emails from our safe!';"
-            "fetch(`/sendemail?email=${document.getElementById('email').value}`, {method: 'GET'} )"
-            ".then(res => console.log(res))"
-           " }"
-        "</script>"
-    "</body>"
+"    <html>"
+"    <head>"
+"        <title>Smart Safe</title>"
+"        <style>"
+"            h1 {text-align: center;}"
+"            .info  {font-size: 18px; color: #333;}"
+"            body {"
+"                background-color: lightblue;"
+"            }"
+"            input {padding: 10px; font-size: 16px; width: 250px;}"
+"            button {"
+"                padding: 10px 15px;"
+"                font-size: 16px; border-radius: 5px; background-color: #007BFF; color: white;"
+"                border: none; cursor: pointer;"
+"                margin-left: 10px;"
+"            }"
+"            button:hover {background-color: #0056b3;}"
+"            #main {"
+"                flex-direction: column;"
+"            }"
+"            .f50 {"
+"                flex: 0 0 50%;"
+"            }"
+"            .df {"
+"                display: flex;"
+"            }"
+"            .row {"
+"                padding: 10px;"
+"                justify-content: center;"
+"            }"
+"            #contact {"
+"                flex-direction: column;"
+"                align-items: center;"
+"            }"
+"            #formContainer {"
+"                flex-direction: column;"
+"            }"
+"            .col {"
+"                display: flex;"
+"                flex-direction: column;"
+"            }"
+"            #row2 {"
+"                justify-content: space-around;"
+"            }"
+"            #row2 > * {"
+"                flex: 0 0 auto;"
+"            }"
+"            #row3 {"
+"                justify-content: center;"
+"                align-items: center;"
+"                display: flex;"
+"            }"
+"            #row3 > * {"
+"                flex: 0 0 auto;"
+"            }"
+"        </style>"
+"    </head>"
+"    <body>"
+"        <div id='main' class='df'>"
+"            <div id='row1' class='row df'>"
+"                <h1>Welcome to Smart Safe</h1>"
+"            </div>"
+"            <div id='row2' class='row f50 df'>"
+"                <div id='formContainer' class='col f50'>"
+"                    <h2>Please Enter Your Email Address:</h2>"
+"                    <div id='inputWrapper' class='df' style='margin-bottom:20px'>"
+"                        <input type='email' id='email' name='user_email' placeholder='Enter your email here' />"
+"                        <button onclick='displayMessage()'>Submit</button>"
+"                    </div>"
+"                    <span id='SubmitMessage'></span>                 "
+"                </div>"
+"                <div class='info col'>"
+"                    <h3>You will receive email alerts for the following events:</h3>"
+"                    <ol>"
+"                        <li>Successful Safe Access - When the correct security code or fingerprint is used.</li>"
+"                        <li>Motion Detected Near the Safe - Motion is detected nearby. (This sensor will reset every 5 minutes to prevent excessive alerts.)</li>"
+"                        <li>Safe Lockdown Activated - Too many failed access attempts have triggered Lockdown Mode.</li>"
+"                        <li>Email Registration Confirmation - Your email has been successfully registered for notifications.</li>"
+"                        <li>Safe Door Left Open - The door has been left open for more than 30 seconds.</li>"
+"                        <li>Tamper Detection Alert - Someone is attempting to access your safe without proper authentication.</li>"
+"                    </ol>"
+""
+"                    <div>Note: Please use your primary Gmail account to register for email notifications.</div>"
+"                </div>"
+"            </div>"
+"            <div id='row3' class='row'>"
+"                <div id='contact' class='f50 df'>"
+"                    <h2>Contact Us:</h2>"
+"                    <span class='info'>Email: SmartSafeSD1@gmail.com</span>"
+"                    <span class='info'>Phone Number: 345-456-5678</span>"
+"                    <span class='info'>"
+"                        Feel free to contact us anytime with questions or for more information about your safe!</span>"
+"                </div>"
+"            </div>"
+"        </div>"
+"        <script>"
+"            function displayMessage() {"
+"            document.getElementById('SubmitMessage').innerHTML = 'Thank you, please keep an eye on emails from our safe!';"
+"            fetch(`/sendemail?email=${document.getElementById('email').value}`, {method: 'GET'} )"
+"            .then(res => console.log(res))"
+"            }"
+"        </script>"
+"    </body>"
 "</html>";
 
       server.send(200, "text/html", response);
@@ -562,8 +598,20 @@ void setup() {
  
 }
 /////////////////////////////// END OF SETUP FUNCTION ///////////////////////////////
+
+void checkLockdownTimeout() {
+  if (inLockdownMode) {
+    if (millis() >= disableUntil) {
+      inLockdownMode = false;
+      resetCode();
+      Serial.println("Lockdown mode timeout. Lockdown mode deactivated");
+    }
+  }
+}
 /////////////////////////// LOOP FUNCTION ////////////////////////////////////////////
 void loop() {
+
+  checkLockdownTimeout();
   server.handleClient();
   delay(2);
 
@@ -611,7 +659,22 @@ duration1 = pulseIn(echoPin1, HIGH);
       sendEmail(readEEPROM(), "Alert: Motion Detected Near Your Safe", "Hello Safe User, \n\nWe wanted to alert you that movement was detected near your safe. This may indicate an attempt to access or tamper with the safe. Please verify that this activity is authorized. If you suspect unauthorized access, consider checking the area and taking necessary precautions.  \n\nThank you, \nSmart Safe");
       Serial.println("Sending Motion Detected Email...");
 
+      //Still in Lockdown Mode
+    if(inLockdownMode == true){
+        display.clearDisplay();
+        display.setTextSize(1);
+        display.setTextColor(WHITE);
+        displayCenteredText("SmartSafe", 5);
+        display.setTextSize(1);
+        displayCenteredText("LOCKDOWN", 20);
+        displayCenteredText("ACTIVATED", 35);
+        displayCenteredText("Use fingerprint", 50);
+        display.display();
+      
+      Serial.println("Still in Lockdown Mode");
+    } else {
       resetCode();
+    }
       timeOfNextMotionTrigger = millis() + MOTION_REPORT_DELAY;
     }
 
@@ -624,6 +687,9 @@ if (inLockdownMode == false && keypad.getKeys()) {
       if (keypad.key[i].stateChanged) { // Only find keys that have changed state
         switch (keypad.key[i].kstate) { // Check active key state
           case PRESSED:
+          analogWrite(buzzerPin, 250);
+          delay(200);
+          analogWrite(buzzerPin, 0);
           Serial.println(keypad.key[i].kchar);
             switch (keypad.key[i].kchar) {
               case '*': // Reset
@@ -648,7 +714,7 @@ if (inLockdownMode == false && keypad.getKeys()) {
                 checkEnteredCode();
                 break;
               default: // Enter digits
-                if (numberOfCodeDigitsEntered < 4) {
+                if (numberOfCodeDigitsEntered < 6) {
                   enteredCode[numberOfCodeDigitsEntered] = keypad.key[i].kchar;
                   numberOfCodeDigitsEntered++;
 
@@ -656,8 +722,8 @@ if (inLockdownMode == false && keypad.getKeys()) {
                 display.setTextSize(1);
                 display.setTextColor(WHITE);
                 displayCenteredText("SmartSafe", 5);
-                display.setTextSize(2);
-                display.setCursor(20, 25);
+                display.setTextSize(1.5);
+                display.setCursor(31, 25);
 
                 for (int i = 0; i < numberOfCodeDigitsEntered; i++){
                   display.print("* ");
@@ -693,7 +759,8 @@ void energizeLock(){
 void checkDoor() {
 
   if (isDoorOpen == true) {
-    //Door is currently open  
+    //Door is currently open 
+    digitalWrite(PIN_BLUE, 255); 
     display.clearDisplay();
       display.setTextSize(1);
       display.setTextColor(WHITE);
@@ -701,7 +768,6 @@ void checkDoor() {
       displayCenteredText("SmartSafe", 5);      
       displayCenteredText("Door Open", 20);
       display.display();
-      digitalWrite(PIN_BLUE, 255);
 
     if (digitalRead(DOOR_SENSOR_PIN) == HIGH) {
       //Door is still open
@@ -710,7 +776,7 @@ void checkDoor() {
 
         //Send the email
         Serial.println("Sending door open alarm email");
-        sendEmail(readEEPROM(), "Safe Door Left Open", "Hello Safe User, \n\nWe wanted to alert you that your safe door has been left open. Please close the door of your safe as soon as possible.  \n\nThank you, \nSmart Safe");
+        sendEmail(readEEPROM(), "Alert: Safe Door Left Open", "Hello Safe User, \n\nWe wanted to alert you that your safe door has been left open. Please close the door of your safe as soon as possible.  \n\nThank you, \nSmart Safe");
         shouldSendEmail = false;
 
         resetCode();
@@ -744,9 +810,9 @@ void checkDoor() {
         
         Serial.println("Safe has been tampered with. Door opended without being unlocked");
         analogWrite(buzzerPin, 250); // Set to HIGH to make the buzzer sound
+        analogWrite(PIN_BLUE, 0);
         analogWrite(PIN_RED, 250); //red on
-
-        sendEmail(readEEPROM(), " SAFE TAMPER DETECTION", "Hello Safe User, \n\nWE WANT TO ALERT YOU THAT YOUR SAFE HAS BEEN TAMPERED WITH. PLEASE TAKE IMMEDIATE PRECAUTIONS! \n\nThank you, \nSmart Safe");
+        sendEmail(readEEPROM(), "HIGH ALERT: SAFE TAMPER DETECTION", "Hello Safe User, \n\nWE WANT TO ALERT YOU THAT YOUR SAFE HAS BEEN TAMPERED WITH. PLEASE TAKE IMMEDIATE PRECAUTIONS! \n\nThank you, \nSmart Safe");
         //Send the email immediately
 
       }
@@ -859,7 +925,7 @@ uint8_t getFingerprintID() {
 
 /////////////////////////////// SEND EMAIL/EMAIL SETUP ////////////////////////////////////////////
 void sendEmail(String emailAddress, String subject, String body) {
-
+  /*
   //Set display screen to sending email message
   if(attempts != 4){
        display.clearDisplay();
@@ -870,7 +936,7 @@ void sendEmail(String emailAddress, String subject, String body) {
        displayCenteredText("Sending Email...", 35);
        display.display();
   }
-
+*/
   ESP_Mail_Session session;
   session.server.host_name = SMTP_server ;
   session.server.port = SMTP_Port;
